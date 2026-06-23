@@ -1,0 +1,87 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Nav from "../components/Nav.astro";
+---
+
+<Layout title="About" description="About the Bowerman neighborhood — our story, who organizes what, and how to get in touch.">
+  <Nav slot="before-nav" />
+
+  <div class="container" style="padding-top:40px;padding-bottom:60px;">
+    <div class="about-layout">
+      <article class="about-content">
+        <h1>About Bowerman</h1>
+        <p class="lead">
+          Bowerman is a close-knit residential neighborhood that has been growing together for years.
+          We do block parties, game watches, garage sales, and plenty of impromptu cookouts
+          — and this site is here to make all of that easier.
+        </p>
+
+        <h2>What this site is for</h2>
+        <p>
+          A simple place to see what's coming up, post your own events, and share quick
+          notices with your neighbors — without the noise of a full-blown social network.
+          No ads, no algorithms, just the people on your street.
+        </p>
+
+        <h2>Who runs this</h2>
+        <p>
+          A small group of volunteers who live here and want to keep the neighborhood connected.
+          If you have questions or need to reach an admin, use the bulletin board or knock on a door.
+        </p>
+
+        <h2>How to participate</h2>
+        <ul>
+          <li>Enter the neighborhood passphrase to unlock the site.</li>
+          <li><a href="/post-event">Post an event</a> — it goes live immediately.</li>
+          <li><a href="/bulletin">Post to the bulletin board</a> for quick notices.</li>
+          <li>RSVP to events so hosts know who's coming.</li>
+        </ul>
+
+        <h2>Privacy</h2>
+        <p>
+          This site is passphrase-gated — it's not publicly accessible.
+          Events and bulletin posts are pseudonymous (display name only).
+          No resident personal data is exposed on public-facing pages,
+          and search engines are asked not to index the site.
+        </p>
+      </article>
+
+      <aside class="about-sidebar">
+        <div class="sidebar-card">
+          <h3>Quick links</h3>
+          <ul class="sidebar-links">
+            <li><a href="/calendar">📅 Calendar</a></li>
+            <li><a href="/post-event">✏️ Post an Event</a></li>
+            <li><a href="/bulletin">📌 Bulletin Board</a></li>
+            <li><a href="/gallery">📸 Photo Gallery</a></li>
+          </ul>
+        </div>
+      </aside>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .about-layout { display: grid; grid-template-columns: 1fr 260px; gap: 48px; align-items: start; }
+  h1 { margin: 0 0 16px; font-size: 2rem; }
+  .lead { font-size: 1.1rem; color: #334155; line-height: 1.7; margin-bottom: 28px; }
+  h2 { font-size: 1.15rem; margin: 28px 0 8px; }
+  p { line-height: 1.75; color: #1e293b; }
+  ul { line-height: 2; padding-left: 20px; }
+  li { color: #1e293b; }
+
+  .sidebar-card {
+    position: sticky; top: 80px;
+    background: #fff; border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px 22px; box-shadow: var(--shadow);
+  }
+  .sidebar-card h3 { margin: 0 0 12px; font-size: 1rem; }
+  .sidebar-links { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+  .sidebar-links a { text-decoration: none; font-size: .92rem; color: var(--text); }
+  .sidebar-links a:hover { color: var(--brand); }
+
+  @media (max-width: 680px) {
+    .about-layout { grid-template-columns: 1fr; }
+    .sidebar-card { position: static; }
+  }
+</style>

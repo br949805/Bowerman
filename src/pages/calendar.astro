@@ -1,0 +1,353 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Nav from "../components/Nav.astro";
+import { CATEGORIES, categoryStyle, formatEventDate } from "../lib/events.ts";
+---
+
+<Layout title="Calendar" description="See all upcoming Bowerman neighborhood events. Filter by category, browse by month, or switch to list view.">
+  <Nav slot="before-nav" />
+
+  <div class="container" style="padding-top:36px;padding-bottom:60px;">
+    <div class="page-header">
+      <h1>Community Calendar</h1>
+      <a href="/post-event" class="btn btn-primary btn-sm">+ Post Event</a>
+    </div>
+
+    <!-- Filter bar -->
+    <div class="filter-bar" role="group" aria-label="Filter by category">
+      <button class="filter-btn active" data-cat="">All</button>
+      {CATEGORIES.map((cat) => {
+        const { bg, text } = categoryStyle(cat);
+        return (
+          <button class="filter-btn" data-cat={cat} style={`--cbg:${bg};--ctxt:${text}`}>{cat}</button>
+        );
+      })}
+    </div>
+
+    <!-- View toggle -->
+    <div class="view-toggle" role="group" aria-label="View mode">
+      <button id="list-btn" class="view-btn active" aria-pressed="true">List</button>
+      <button id="month-btn" class="view-btn" aria-pressed="false">Month</button>
+    </div>
+
+    <!-- Loading / error states -->
+    <div id="cal-loading" aria-live="polite" class="status-msg">Loading events…</div>
+    <div id="cal-error" class="status-msg error hidden" aria-live="assertive">
+      Couldn't load events. Please try refreshing.
+    </div>
+
+    <!-- List view -->
+    <div id="list-view">
+      <div id="list-empty" class="empty-state hidden">
+        <p>Nothing scheduled yet — <a href="/post-event">be the first to add something!</a></p>
+      </div>
+      <div id="list-empty-filter" class="empty-state hidden">
+        <p>No events in this category. <button class="link-btn" id="clear-filter">Clear filter</button></p>
+      </div>
+      <div id="event-list"></div>
+    </div>
+
+    <!-- Month view -->
+    <div id="month-view" class="hidden">
+      <div class="month-nav">
+        <button id="prev-month" class="btn btn-secondary btn-sm" aria-label="Previous month">←</button>
+        <h2 id="month-label"></h2>
+        <button id="next-month" class="btn btn-secondary btn-sm" aria-label="Next month">→</button>
+      </div>
+      <div id="month-grid" class="month-grid" role="grid"></div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+  h1 { margin: 0; font-size: 1.8rem; }
+
+  /* Filter */
+  .filter-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+  .filter-btn {
+    padding: 5px 14px; border-radius: 99px; border: 1px solid var(--border);
+    background: #fff; font: inherit; font-size: .82rem; font-weight: 500; cursor: pointer;
+    transition: background .15s, color .15s;
+  }
+  .filter-btn.active { background: var(--cbg, var(--brand-light)); color: var(--ctxt, var(--brand-dark)); border-color: transparent; }
+  .filter-btn:first-child.active { background: var(--brand-light); color: var(--brand-dark); }
+
+  /* View toggle */
+  .view-toggle { display: flex; gap: 4px; margin-bottom: 28px; }
+  .view-btn {
+    padding: 7px 18px; border: 1px solid var(--border); border-radius: 8px;
+    background: #fff; font: inherit; font-size: .88rem; cursor: pointer;
+  }
+  .view-btn.active { background: var(--brand); color: #fff; border-color: var(--brand); }
+
+  /* Status */
+  .status-msg { color: var(--text-muted); padding: 20px 0; }
+  .status-msg.error { color: #b45309; background: #fff3e0; border-radius: 8px; padding: 12px 16px; }
+
+  /* List view */
+  .month-group { margin-bottom: 36px; }
+  .month-group h3 { font-size: 1rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; margin: 0 0 14px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+  .event-row {
+    display: flex; align-items: flex-start; gap: 16px;
+    padding: 14px 0; border-bottom: 1px solid var(--border); text-decoration: none; color: inherit;
+    transition: background .12s;
+  }
+  .event-row:last-child { border-bottom: none; }
+  .event-row:hover { background: var(--bg-subtle); margin: 0 -10px; padding-left: 10px; padding-right: 10px; border-radius: 8px; }
+  .row-date { width: 52px; flex-shrink: 0; text-align: center; padding-top: 2px; }
+  .row-date-day { font-size: 1.4rem; font-weight: 700; line-height: 1; color: var(--brand-dark); }
+  .row-date-dow { font-size: .72rem; text-transform: uppercase; color: var(--text-muted); letter-spacing: .05em; }
+  .row-body { flex: 1; min-width: 0; }
+  .row-title { font-weight: 600; font-size: 1rem; margin-bottom: 3px; }
+  .row-meta { font-size: .83rem; color: var(--text-muted); }
+  .row-cat {
+    display: inline-block; padding: 1px 8px; border-radius: 99px;
+    font-size: .72rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+    margin-right: 6px; vertical-align: middle;
+  }
+
+  /* Empty */
+  .empty-state { padding: 40px 0; color: var(--text-muted); text-align: center; font-size: 1rem; }
+  .empty-state p { margin: 0; }
+  .link-btn { background: none; border: none; color: var(--brand-dark); font: inherit; cursor: pointer; padding: 0; text-decoration: underline; }
+
+  /* Month view */
+  .month-nav { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+  .month-nav h2 { margin: 0; font-size: 1.2rem; }
+  .month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .month-dow { background: var(--bg-subtle); padding: 8px 4px; text-align: center; font-size: .78rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); letter-spacing: .05em; }
+  .month-cell { background: #fff; min-height: 90px; padding: 6px; font-size: .8rem; }
+  .month-cell.other-month { background: #fafafa; }
+  .month-cell.today { background: #f0fdf4; }
+  .cell-day { font-weight: 600; margin-bottom: 4px; font-size: .85rem; }
+  .cell-day.today-num { color: var(--brand); }
+  .cell-event {
+    display: block; padding: 2px 5px; border-radius: 4px; margin-bottom: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    font-size: .72rem; font-weight: 500; text-decoration: none; color: inherit;
+  }
+  .cell-more { font-size: .7rem; color: var(--text-muted); margin-top: 2px; }
+  @media (max-width: 600px) {
+    .month-cell { min-height: 60px; padding: 4px; }
+    .cell-event { display: none; }
+    .cell-more { display: none; }
+  }
+</style>
+
+<script>
+  // All event data and UI logic
+  let allEvents: any[] = [];
+  let activeCategory = "";
+  let viewMode = "list";
+  let currentMonth = new Date();
+  currentMonth.setDate(1);
+
+  const listView = document.getElementById("list-view")!;
+  const monthView = document.getElementById("month-view")!;
+  const eventListEl = document.getElementById("event-list")!;
+  const calLoading = document.getElementById("cal-loading")!;
+  const calError = document.getElementById("cal-error")!;
+  const listEmpty = document.getElementById("list-empty")!;
+  const listEmptyFilter = document.getElementById("list-empty-filter")!;
+
+  function filteredEvents() {
+    const now = Date.now() - 3_600_000;
+    return allEvents.filter((e) => {
+      if (new Date(e.startDateTime).getTime() < now) return false;
+      return !activeCategory || e.category === activeCategory;
+    });
+  }
+
+  function categoryStyle(cat: string): { bg: string; text: string } {
+    const map: Record<string, { bg: string; text: string }> = {
+      "Block Party":  { bg: "#fff3e0", text: "#b45309" },
+      "Game Watch":   { bg: "#eff6ff", text: "#1d4ed8" },
+      "Garage Sale":  { bg: "#fefce8", text: "#a16207" },
+      "Meeting":      { bg: "#eef2ff", text: "#4338ca" },
+      "Kids":         { bg: "#fdf2f8", text: "#9d174d" },
+      "Volunteer":    { bg: "#f0fdf9", text: "#0f766e" },
+      "Social":       { bg: "#faf5ff", text: "#7e22ce" },
+      "Other":        { bg: "#f1f5f9", text: "#475569" },
+    };
+    return map[cat] ?? map["Other"];
+  }
+
+  function renderList() {
+    const events = filteredEvents();
+    eventListEl.innerHTML = "";
+    listEmpty.classList.add("hidden");
+    listEmptyFilter.classList.add("hidden");
+
+    if (events.length === 0) {
+      activeCategory ? listEmptyFilter.classList.remove("hidden") : listEmpty.classList.remove("hidden");
+      return;
+    }
+
+    // Group by month
+    const groups = new Map<string, any[]>();
+    for (const e of events) {
+      const key = new Date(e.startDateTime).toLocaleString("en-US", { month: "long", year: "numeric" });
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(e);
+    }
+
+    for (const [month, evs] of groups) {
+      const div = document.createElement("div");
+      div.className = "month-group";
+      const h3 = document.createElement("h3");
+      h3.textContent = month;
+      div.appendChild(h3);
+      for (const ev of evs) {
+        const a = document.createElement("a");
+        a.className = "event-row";
+        a.href = `/events/${ev.id}`;
+        const d = new Date(ev.startDateTime);
+        const { bg, text: txt } = categoryStyle(ev.category);
+        a.innerHTML = `
+          <div class="row-date">
+            <div class="row-date-day">${d.getDate()}</div>
+            <div class="row-date-dow">${d.toLocaleString("en-US", { weekday: "short" })}</div>
+          </div>
+          <div class="row-body">
+            <div class="row-title"></div>
+            <div class="row-meta">
+              <span class="row-cat" style="background:${bg};color:${txt};"></span>
+              <span class="row-time"></span>
+              ${ev.locationName ? `· <span class="row-loc"></span>` : ""}
+            </div>
+          </div>
+        `;
+        a.querySelector(".row-title")!.textContent = ev.title;
+        a.querySelector(".row-cat")!.textContent = ev.category;
+        (a.querySelector(".row-time") as HTMLElement).textContent = ev.allDay
+          ? "All day"
+          : d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+        const locEl = a.querySelector(".row-loc");
+        if (locEl && ev.locationName) locEl.textContent = ev.locationName;
+        div.appendChild(a);
+      }
+      eventListEl.appendChild(div);
+    }
+  }
+
+  function renderMonth() {
+    const grid = document.getElementById("month-grid")!;
+    const label = document.getElementById("month-label")!;
+    label.textContent = currentMonth.toLocaleString("en-US", { month: "long", year: "numeric" });
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const firstDow = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    const events = allEvents.filter((e) => {
+      const d = new Date(e.startDateTime);
+      return (!activeCategory || e.category === activeCategory) &&
+        d.getFullYear() === year && d.getMonth() === month;
+    });
+
+    // bucket events by day
+    const byDay: Record<number, any[]> = {};
+    for (const e of events) {
+      const day = new Date(e.startDateTime).getDate();
+      (byDay[day] ||= []).push(e);
+    }
+
+    const dows = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    let html = dows.map((d) => `<div class="month-dow" role="columnheader" aria-label="${d}">${d}</div>`).join("");
+
+    // padding cells before month starts
+    for (let i = 0; i < firstDow; i++) html += `<div class="month-cell other-month" role="gridcell"></div>`;
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const cellDate = new Date(year, month, day);
+      const isToday = cellDate.getTime() === today.getTime();
+      const dayEvents = byDay[day] ?? [];
+      const shown = dayEvents.slice(0, 2);
+      const extra = dayEvents.length - shown.length;
+      html += `<div class="month-cell${isToday ? " today" : ""}" role="gridcell" aria-label="${cellDate.toDateString()}">
+        <div class="cell-day${isToday ? " today-num" : ""}">${day}</div>
+        ${shown.map((e) => {
+          const { bg, text: txt } = categoryStyle(e.category);
+          return `<a class="cell-event" href="/events/${e.id}" style="background:${bg};color:${txt};">${e.title}</a>`;
+        }).join("")}
+        ${extra > 0 ? `<div class="cell-more">+${extra} more</div>` : ""}
+      </div>`;
+    }
+
+    grid.innerHTML = html;
+  }
+
+  function render() {
+    if (viewMode === "list") renderList();
+    else renderMonth();
+  }
+
+  // Load events
+  (async () => {
+    try {
+      const res = await fetch("/api/events");
+      if (!res.ok) throw new Error();
+      allEvents = await res.json();
+      calLoading.classList.add("hidden");
+      render();
+    } catch {
+      calLoading.classList.add("hidden");
+      calError.classList.remove("hidden");
+    }
+  })();
+
+  // Filter buttons
+  document.querySelectorAll<HTMLButtonElement>(".filter-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".filter-btn").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      activeCategory = btn.dataset.cat ?? "";
+      render();
+    });
+  });
+
+  // Clear filter
+  document.getElementById("clear-filter")?.addEventListener("click", () => {
+    document.querySelectorAll(".filter-btn").forEach((b) => b.classList.remove("active"));
+    document.querySelector(".filter-btn")?.classList.add("active");
+    activeCategory = "";
+    render();
+  });
+
+  // View toggle
+  document.getElementById("list-btn")?.addEventListener("click", () => {
+    viewMode = "list";
+    listView.classList.remove("hidden");
+    monthView.classList.add("hidden");
+    document.getElementById("list-btn")?.classList.add("active");
+    document.getElementById("list-btn")?.setAttribute("aria-pressed", "true");
+    document.getElementById("month-btn")?.classList.remove("active");
+    document.getElementById("month-btn")?.setAttribute("aria-pressed", "false");
+    render();
+  });
+  document.getElementById("month-btn")?.addEventListener("click", () => {
+    viewMode = "month";
+    listView.classList.add("hidden");
+    monthView.classList.remove("hidden");
+    document.getElementById("month-btn")?.classList.add("active");
+    document.getElementById("month-btn")?.setAttribute("aria-pressed", "true");
+    document.getElementById("list-btn")?.classList.remove("active");
+    document.getElementById("list-btn")?.setAttribute("aria-pressed", "false");
+    render();
+  });
+
+  // Month nav
+  document.getElementById("prev-month")?.addEventListener("click", () => {
+    currentMonth.setMonth(currentMonth.getMonth() - 1);
+    render();
+  });
+  document.getElementById("next-month")?.addEventListener("click", () => {
+    currentMonth.setMonth(currentMonth.getMonth() + 1);
+    render();
+  });
+</script>

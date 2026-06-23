@@ -1,0 +1,149 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Nav from "../components/Nav.astro";
+import EventCard from "../components/EventCard.astro";
+
+// Fetch upcoming events from the API at build/request time
+let upcomingEvents: any[] = [];
+let fetchError = false;
+
+try {
+  const base = Astro.url.origin;
+  const res = await fetch(`${base}/api/events`);
+  if (res.ok) {
+    const all: any[] = await res.json();
+    const now = Date.now();
+    upcomingEvents = all
+      .filter((e) => new Date(e.startDateTime).getTime() >= now - 3_600_000) // up to 1hr past
+      .slice(0, 3);
+  }
+} catch {
+  fetchError = true;
+}
+---
+
+<Layout
+  title="Bowerman"
+  description="Bowerman neighborhood — see what's coming up, post an event, and stay connected with your neighbors."
+>
+  <Nav slot="before-nav" />
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container hero-inner">
+      <div class="hero-text">
+        <h1>Welcome to<br /><span class="hero-name">Bowerman</span></h1>
+        <p class="hero-sub">
+          Your neighborhood's gathering place — see what's coming up,
+          share news on the bulletin board, and add your own events.
+        </p>
+        <div class="hero-actions">
+          <a href="/calendar" class="btn btn-primary">View Calendar</a>
+          <a href="/post-event" class="btn btn-secondary">+ Post an Event</a>
+        </div>
+      </div>
+      <div class="hero-art" aria-hidden="true">🏘️</div>
+    </div>
+  </section>
+
+  <!-- Upcoming events -->
+  <section class="upcoming">
+    <div class="container">
+      <div class="section-header">
+        <h2>Coming Up</h2>
+        <a href="/calendar" class="see-all">See all →</a>
+      </div>
+
+      {fetchError && (
+        <p class="notice">Couldn't load events right now — try refreshing.</p>
+      )}
+
+      {!fetchError && upcomingEvents.length === 0 && (
+        <div class="empty-state">
+          <p>Nothing on the calendar yet.</p>
+          <a href="/post-event" class="btn btn-primary">Be the first to add something!</a>
+        </div>
+      )}
+
+      {upcomingEvents.length > 0 && (
+        <div class="event-grid">
+          {upcomingEvents.map((ev) => <EventCard event={ev} />)}
+        </div>
+      )}
+    </div>
+  </section>
+
+  <!-- Quick links -->
+  <section class="quick-links">
+    <div class="container">
+      <h2 class="sr-only">Quick links</h2>
+      <div class="ql-grid">
+        <a href="/post-event" class="ql-card">
+          <span class="ql-icon">📅</span>
+          <span class="ql-label">Post an Event</span>
+          <span class="ql-desc">Add a block party, game watch, or anything neighbors would love.</span>
+        </a>
+        <a href="/bulletin" class="ql-card">
+          <span class="ql-icon">📌</span>
+          <span class="ql-label">Bulletin Board</span>
+          <span class="ql-desc">Lost & found, recommendations, free stuff — quick neighborhood notices.</span>
+        </a>
+        <a href="/gallery" class="ql-card">
+          <span class="ql-icon">📸</span>
+          <span class="ql-label">Gallery</span>
+          <span class="ql-desc">Photos from past block parties and neighborhood gatherings.</span>
+        </a>
+        <a href="/about" class="ql-card">
+          <span class="ql-icon">🗺️</span>
+          <span class="ql-label">About</span>
+          <span class="ql-desc">Our neighborhood story and who organizes what.</span>
+        </a>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  /* Hero */
+  .hero {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 60%, #bbf7d0 100%);
+    padding: 60px 0 50px;
+    border-bottom: 1px solid #d1fae5;
+  }
+  .hero-inner {
+    display: flex; align-items: center; justify-content: space-between; gap: 32px;
+  }
+  .hero-text { flex: 1 1 0; }
+  h1 { margin: 0 0 12px; font-size: clamp(2rem, 5vw, 3rem); line-height: 1.15; color: #052e16; }
+  .hero-name { color: var(--brand); }
+  .hero-sub { margin: 0 0 24px; font-size: 1.1rem; color: #166534; max-width: 480px; }
+  .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+  .hero-art { font-size: clamp(4rem, 10vw, 7rem); line-height: 1; flex-shrink: 0; }
+
+  /* Upcoming */
+  .upcoming { padding: 52px 0; }
+  .section-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 24px; }
+  .section-header h2 { margin: 0; font-size: 1.5rem; }
+  .see-all { font-size: .9rem; color: var(--brand-dark); font-weight: 500; }
+  .event-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+  .empty-state p { margin: 0 0 16px; font-size: 1.05rem; }
+  .notice { color: #b45309; background: #fff3e0; border-radius: 8px; padding: 12px 16px; }
+
+  /* Quick links */
+  .quick-links { padding: 0 0 60px; }
+  .quick-links h2 { margin: 0 0 24px; font-size: 1.3rem; }
+  .ql-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+  .ql-card {
+    display: flex; flex-direction: column; gap: 6px;
+    padding: 22px 20px; background: #fff;
+    border: 1px solid var(--border); border-radius: var(--radius);
+    text-decoration: none; color: inherit;
+    transition: box-shadow .15s, transform .15s;
+    box-shadow: var(--shadow);
+  }
+  .ql-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,.10); transform: translateY(-2px); }
+  .ql-icon { font-size: 1.6rem; line-height: 1; }
+  .ql-label { font-weight: 700; font-size: 1rem; color: var(--text); }
+  .ql-desc { font-size: .85rem; color: var(--text-muted); line-height: 1.5; }
+</style>

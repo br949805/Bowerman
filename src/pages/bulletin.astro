@@ -1,0 +1,301 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Nav from "../components/Nav.astro";
+---
+
+<Layout title="Bulletin Board" description="Bowerman neighborhood bulletin board — announcements, lost & found, recommendations, and more.">
+  <Nav slot="before-nav" />
+
+  <div class="container" style="padding-top:36px;padding-bottom:60px;">
+    <div class="page-layout">
+      <!-- Posts side -->
+      <div class="posts-col">
+        <div class="page-header">
+          <h1>Bulletin Board</h1>
+        </div>
+
+        <!-- Category filter -->
+        <div class="filter-bar" role="group" aria-label="Filter by category">
+          <button class="filter-btn active" data-cat="">All</button>
+          {["Announcement","Lost & Found","Borrow/Lend","Recommendation","For Sale/Free","General"].map((c) => (
+            <button class="filter-btn" data-cat={c}>{c}</button>
+          ))}
+        </div>
+
+        <div id="posts-loading" class="status-msg" aria-live="polite">Loading posts…</div>
+        <div id="posts-error" class="status-msg error hidden" aria-live="assertive">Couldn't load posts. Try refreshing.</div>
+        <div id="posts-empty" class="empty-state hidden"><p>No posts yet — be the first!</p></div>
+        <div id="posts-empty-filter" class="empty-state hidden">
+          <p>Nothing in this category. <button class="link-btn" id="clear-filter">Clear filter</button></p>
+        </div>
+        <div id="posts-list"></div>
+      </div>
+
+      <!-- Post form side -->
+      <aside class="form-col">
+        <div class="post-form-card">
+          <h2>Post a Notice</h2>
+          <p class="form-sub">Visible to all neighbors immediately.</p>
+
+          <div id="form-success" class="notice success hidden" role="alert">Posted! Your notice is live.</div>
+
+          <form id="bulletin-form" novalidate>
+            <!-- Honeypot -->
+            <div style="display:none;" aria-hidden="true">
+              <input name="honeypot" type="text" tabindex="-1" autocomplete="off" />
+            </div>
+
+            <div class="form-row required">
+              <label for="b-category">Category</label>
+              <select id="b-category" name="category" required>
+                <option value="">Select…</option>
+                {["Announcement","Lost & Found","Borrow/Lend","Recommendation","For Sale/Free","General"].map((c) => (
+                  <option value={c}>{c}</option>
+                ))}
+              </select>
+              <span class="field-error" id="b-category-err"></span>
+            </div>
+            <div class="form-row required">
+              <label for="b-title">Title</label>
+              <input id="b-title" name="title" type="text" required maxlength="120" placeholder="Short headline…" />
+              <span class="field-error" id="b-title-err"></span>
+            </div>
+            <div class="form-row required">
+              <label for="b-body">Message</label>
+              <textarea id="b-body" name="body" rows="4" required maxlength="1000" placeholder="Details…"></textarea>
+              <span class="field-error" id="b-body-err"></span>
+            </div>
+            <div class="form-row required">
+              <label for="b-author">Your display name</label>
+              <input id="b-author" name="authorName" type="text" required maxlength="60" placeholder="Neighbor name" />
+              <span class="field-error" id="b-author-err"></span>
+            </div>
+            <div class="form-row">
+              <label for="b-contact">Contact email <span class="optional">(optional)</span></label>
+              <input id="b-contact" name="contactEmail" type="email" maxlength="100" placeholder="So neighbors can reach you" />
+            </div>
+            <div id="b-form-error" class="notice error hidden" role="alert"></div>
+            <button type="submit" class="btn btn-primary submit-btn" id="b-submit">Post →</button>
+          </form>
+        </div>
+      </aside>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .page-layout { display: grid; grid-template-columns: 1fr 340px; gap: 40px; align-items: start; }
+  .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  h1 { margin: 0; font-size: 1.8rem; }
+
+  /* Filter */
+  .filter-bar { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 24px; }
+  .filter-btn {
+    padding: 4px 12px; border-radius: 99px; border: 1px solid var(--border);
+    background: #fff; font: inherit; font-size: .8rem; cursor: pointer;
+  }
+  .filter-btn.active { background: var(--brand-light); color: var(--brand-dark); border-color: transparent; }
+
+  /* Posts */
+  .status-msg { color: var(--text-muted); padding: 16px 0; }
+  .status-msg.error { background: #fff3e0; color: #b45309; border-radius: 8px; padding: 12px 16px; }
+  .empty-state { padding: 32px 0; color: var(--text-muted); text-align: center; }
+  .empty-state p { margin: 0; }
+  .link-btn { background: none; border: none; color: var(--brand-dark); font: inherit; cursor: pointer; padding: 0; text-decoration: underline; }
+
+  .post-item {
+    background: #fff; border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 18px 20px; margin-bottom: 16px; box-shadow: var(--shadow);
+  }
+  .post-cat {
+    display: inline-block; padding: 2px 10px; border-radius: 99px;
+    font-size: .72rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+    background: var(--brand-light); color: var(--brand-dark); margin-bottom: 8px;
+  }
+  .post-title { font-size: 1rem; font-weight: 700; margin: 0 0 6px; }
+  .post-body { font-size: .9rem; line-height: 1.6; color: var(--text); margin: 0 0 10px; white-space: pre-wrap; }
+  .post-footer { font-size: .8rem; color: var(--text-muted); display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .post-footer a { color: var(--brand-dark); }
+
+  /* Form card */
+  .form-col { position: sticky; top: 76px; }
+  .post-form-card {
+    background: #fff; border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 24px; box-shadow: var(--shadow);
+  }
+  .post-form-card h2 { margin: 0 0 4px; font-size: 1.1rem; }
+  .form-sub { margin: 0 0 18px; font-size: .85rem; color: var(--text-muted); }
+  .form-row { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+  .form-row.required > label::after { content: " *"; color: #dc2626; }
+  .form-row label { font-size: .83rem; font-weight: 500; }
+  .form-row input, .form-row select, .form-row textarea {
+    padding: 9px 10px; border: 1px solid var(--border); border-radius: 8px;
+    font: inherit; font-size: .88rem; background: var(--bg-subtle); resize: vertical;
+  }
+  .form-row input:focus, .form-row select:focus, .form-row textarea:focus {
+    outline: 2px solid var(--brand); outline-offset: 1px; border-color: transparent;
+  }
+  .optional { color: var(--text-muted); font-weight: 400; }
+  .field-error { font-size: .78rem; color: #dc2626; min-height: 1em; }
+  .notice { padding: 10px 14px; border-radius: 8px; font-size: .88rem; margin-bottom: 14px; }
+  .notice.success { background: var(--brand-light); color: var(--brand-dark); }
+  .notice.error { background: #fff3e0; color: #b45309; }
+  .submit-btn { width: 100%; justify-content: center; padding: 11px; }
+
+  @media (max-width: 720px) {
+    .page-layout { grid-template-columns: 1fr; }
+    .form-col { position: static; }
+  }
+</style>
+
+<script>
+  let allPosts: any[] = [];
+  let activeCategory = "";
+
+  const CAT_COLORS: Record<string, { bg: string; text: string }> = {
+    "Announcement":   { bg: "#eff6ff", text: "#1d4ed8" },
+    "Lost & Found":   { bg: "#fef3c7", text: "#92400e" },
+    "Borrow/Lend":    { bg: "#f0fdf9", text: "#0f766e" },
+    "Recommendation": { bg: "#fdf2f8", text: "#9d174d" },
+    "For Sale/Free":  { bg: "#f0fdf4", text: "#166534" },
+    "General":        { bg: "#f1f5f9", text: "#475569" },
+  };
+
+  function renderPosts() {
+    const postsEl = document.getElementById("posts-list")!;
+    const emptyEl = document.getElementById("posts-empty")!;
+    const emptyFilterEl = document.getElementById("posts-empty-filter")!;
+    postsEl.innerHTML = "";
+    emptyEl.classList.add("hidden");
+    emptyFilterEl.classList.add("hidden");
+
+    const posts = activeCategory ? allPosts.filter((p) => p.category === activeCategory) : allPosts;
+    if (posts.length === 0) {
+      activeCategory ? emptyFilterEl.classList.remove("hidden") : emptyEl.classList.remove("hidden");
+      return;
+    }
+    for (const p of posts) {
+      const { bg, text: txt } = CAT_COLORS[p.category] ?? CAT_COLORS["General"];
+      const div = document.createElement("div");
+      div.className = "post-item";
+      const when = p.createdAt ? new Date(p.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "";
+      div.innerHTML = `
+        <div class="post-cat" style="background:${bg};color:${txt};"></div>
+        <div class="post-title"></div>
+        <div class="post-body"></div>
+        <div class="post-footer">
+          <span></span>
+          <span>${when}</span>
+          ${p.contactEmail ? `<a href="mailto:${p.contactEmail}">Contact</a>` : ""}
+        </div>
+      `;
+      div.querySelector(".post-cat")!.textContent = p.category;
+      div.querySelector(".post-title")!.textContent = p.title;
+      div.querySelector(".post-body")!.textContent = p.body;
+      div.querySelectorAll(".post-footer span")[0].textContent = `— ${p.authorName}`;
+      postsEl.appendChild(div);
+    }
+  }
+
+  (async () => {
+    const loadingEl = document.getElementById("posts-loading")!;
+    const errorEl = document.getElementById("posts-error")!;
+    try {
+      const res = await fetch("/api/bulletin");
+      if (!res.ok) throw new Error();
+      allPosts = await res.json();
+      loadingEl.classList.add("hidden");
+      renderPosts();
+    } catch {
+      loadingEl.classList.add("hidden");
+      errorEl.classList.remove("hidden");
+    }
+  })();
+
+  // Filter
+  document.querySelectorAll<HTMLButtonElement>(".filter-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".filter-btn").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      activeCategory = btn.dataset.cat ?? "";
+      renderPosts();
+    });
+  });
+  document.getElementById("clear-filter")?.addEventListener("click", () => {
+    document.querySelectorAll(".filter-btn").forEach((b) => b.classList.remove("active"));
+    document.querySelector(".filter-btn")?.classList.add("active");
+    activeCategory = "";
+    renderPosts();
+  });
+
+  // Post form
+  const form = document.getElementById("bulletin-form") as HTMLFormElement;
+  const submitBtn = document.getElementById("b-submit") as HTMLButtonElement;
+  const formSuccess = document.getElementById("form-success")!;
+  const formError = document.getElementById("b-form-error")!;
+
+  function showErr(id: string, msg: string) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = msg;
+  }
+
+  function validate() {
+    let ok = true;
+    showErr("b-category-err", "");
+    showErr("b-title-err", "");
+    showErr("b-body-err", "");
+    showErr("b-author-err", "");
+    const cat = (document.getElementById("b-category") as HTMLSelectElement).value;
+    const title = (document.getElementById("b-title") as HTMLInputElement).value.trim();
+    const body = (document.getElementById("b-body") as HTMLTextAreaElement).value.trim();
+    const author = (document.getElementById("b-author") as HTMLInputElement).value.trim();
+    if (!cat) { showErr("b-category-err", "Please pick a category."); ok = false; }
+    if (!title) { showErr("b-title-err", "Please enter a title."); ok = false; }
+    if (!body) { showErr("b-body-err", "Please enter a message."); ok = false; }
+    if (!author) { showErr("b-author-err", "Please enter your display name."); ok = false; }
+    return ok;
+  }
+
+  form?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    formError.classList.add("hidden");
+    if (!validate()) return;
+    submitBtn.disabled = true;
+    const fd = new FormData(form);
+    const payload = {
+      category: fd.get("category"),
+      title: fd.get("title"),
+      body: fd.get("body"),
+      authorName: fd.get("authorName"),
+      contactEmail: fd.get("contactEmail") || undefined,
+      honeypot: fd.get("honeypot") || "",
+    };
+    try {
+      const res = await fetch("/api/post-bulletin", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        formSuccess.classList.remove("hidden");
+        form.reset();
+        // prepend new post to local list
+        allPosts.unshift({
+          id: data.id,
+          ...payload,
+          createdAt: new Date().toISOString(),
+        });
+        renderPosts();
+      } else {
+        formError.textContent = data.error || "Failed to post. Try again.";
+        formError.classList.remove("hidden");
+      }
+    } catch {
+      formError.textContent = "Network error — please try again.";
+      formError.classList.remove("hidden");
+    } finally {
+      submitBtn.disabled = false;
+    }
+  });
+</script>

@@ -1,0 +1,20 @@
+# Netlify configuration for the Bowerman neighborhood site.
+# Astro builds to dist/. Edge Function gates the whole site.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# Edge Functions are auto-discovered from netlify/edge-functions/.
+# gate.ts declares its own routing (path = "/*") via `export const config`.
+
+# Force HTTPS is set in the Netlify UI once a custom domain is configured.
+# The edge gate intercepts all traffic — no extra redirect rules needed.
+
+[dev]
+  command = "astro dev"
+  targetPort = 4321

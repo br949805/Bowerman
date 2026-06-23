@@ -1,0 +1,209 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import Nav from "../../components/Nav.astro";
+import { categoryStyle, formatEventDate, makeICS, googleCalendarURL } from "../../lib/events.ts";
+
+const { id } = Astro.params;
+
+let event: any = null;
+let fetchError = false;
+
+try {
+  const base = Astro.url.origin;
+  const res = await fetch(`${base}/api/events/${id}`);
+  if (res.ok) {
+    event = await res.json();
+  }
+} catch {
+  fetchError = true;
+}
+
+if (!event && !fetchError) {
+  return Astro.redirect("/calendar");
+}
+
+const catStyle = event ? categoryStyle(event.category) : { bg: "", text: "" };
+const dateStr = event ? formatEventDate(event.startDateTime, event.endDateTime, event.allDay) : "";
+const icsData = event ? makeICS(event) : "";
+const icsB64 = event ? btoa(unescape(encodeURIComponent(icsData))) : "";
+const gcalURL = event ? googleCalendarURL(event) : "";
+---
+
+<Layout
+  title={event?.title ?? "Event"}
+  description={event?.description ?? `${event?.title} — Bowerman neighborhood event.`}
+>
+  <Nav slot="before-nav" />
+
+  <div class="container" style="padding-top:36px;padding-bottom:60px;">
+    <a href="/calendar" class="back-link">← Back to Calendar</a>
+
+    {fetchError && (
+      <div class="notice error">Couldn't load this event. Please try refreshing.</div>
+    )}
+
+    {event && (
+      <article class="event-detail">
+        <header class="event-header">
+          <span class="cat-pill" style={`background:${catStyle.bg};color:${catStyle.text};`}>
+            {event.category}
+          </span>
+          <h1>{event.title}</h1>
+          <div class="event-meta">
+            <div class="meta-row">
+              <span class="meta-icon" aria-hidden="true">📅</span>
+              <span>{dateStr}</span>
+            </div>
+            {event.locationName && (
+              <div class="meta-row">
+                <span class="meta-icon" aria-hidden="true">📍</span>
+                <span>
+                  {event.locationName}
+                  {event.locationAddress && <span class="loc-addr"> · {event.locationAddress}</span>}
+                </span>
+              </div>
+            )}
+            {event.hostName && (
+              <div class="meta-row">
+                <span class="meta-icon" aria-hidden="true">👤</span>
+                <span>
+                  Hosted by {event.hostName}
+                  {event.hostContact && (
+                    <a href={`mailto:${event.hostContact}`} class="contact-link"> · Contact</a>
+                  )}
+                </span>
+              </div>
+            )}
+          </div>
+        </header>
+
+        {event.description && (
+          <div class="event-body">
+            <p>{event.description}</p>
+          </div>
+        )}
+
+        <!-- Add to calendar -->
+        <div class="cal-actions">
+          <a
+            href={`data:text/calendar;base64,${icsB64}`}
+            download={`${event.title.replace(/[^a-z0-9]/gi, "-")}.ics`}
+            class="btn btn-secondary btn-sm"
+          >
+            📥 Add to Calendar (.ics)
+          </a>
+          <a href={gcalURL} target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm">
+            📆 Google Calendar
+          </a>
+        </div>
+
+        <!-- RSVP -->
+        <section class="rsvp-section" aria-label="RSVP">
+          <h2>Count me in</h2>
+          <div id="rsvp-count" class="rsvp-count" aria-live="polite">
+            {(event.rsvpCount ?? 0) > 0
+              ? `${event.rsvpCount} neighbor${event.rsvpCount === 1 ? "" : "s"} going`
+              : "Be the first to RSVP!"}
+          </div>
+
+          <form id="rsvp-form" class="rsvp-form" novalidate>
+            <div class="form-row">
+              <label for="rsvp-name">Your name <span class="optional">(optional)</span></label>
+              <input id="rsvp-name" name="name" type="text" placeholder="Neighbor name" autocomplete="name" />
+            </div>
+            <div class="form-row">
+              <label for="rsvp-size">Party size</label>
+              <select id="rsvp-size" name="size">
+                {[1,2,3,4,5,6].map((n) => <option value={n}>{n}</option>)}
+                <option value="7">7+</option>
+              </select>
+            </div>
+            <div id="rsvp-status" class="rsvp-status hidden" aria-live="polite"></div>
+            <button type="submit" class="btn btn-primary" id="rsvp-btn">Count me in 🎉</button>
+          </form>
+        </section>
+      </article>
+    )}
+  </div>
+</Layout>
+
+<style>
+  .back-link { display: inline-block; margin-bottom: 24px; color: var(--text-muted); font-size: .9rem; text-decoration: none; }
+  .back-link:hover { color: var(--text); }
+  .notice.error { background: #fff3e0; color: #b45309; border-radius: 8px; padding: 12px 16px; }
+
+  .event-detail { max-width: 680px; }
+  .event-header { margin-bottom: 28px; }
+  .cat-pill { font-size: .78rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 3px 12px; border-radius: 99px; }
+  h1 { margin: 14px 0 16px; font-size: clamp(1.5rem, 4vw, 2rem); line-height: 1.2; }
+  .event-meta { display: flex; flex-direction: column; gap: 8px; }
+  .meta-row { display: flex; align-items: flex-start; gap: 10px; font-size: .95rem; }
+  .meta-icon { font-size: 1rem; flex-shrink: 0; margin-top: 2px; }
+  .loc-addr { color: var(--text-muted); }
+  .contact-link { font-size: .85rem; }
+
+  .event-body { margin: 24px 0; padding: 20px; background: var(--bg-subtle); border-radius: var(--radius); }
+  .event-body p { margin: 0; line-height: 1.7; white-space: pre-wrap; }
+
+  .cal-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 36px; }
+
+  /* RSVP */
+  .rsvp-section { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow); }
+  .rsvp-section h2 { margin: 0 0 8px; font-size: 1.2rem; }
+  .rsvp-count { font-size: 1rem; color: var(--brand-dark); font-weight: 600; margin-bottom: 20px; }
+  .rsvp-form { display: flex; flex-direction: column; gap: 16px; }
+  .form-row { display: flex; flex-direction: column; gap: 5px; }
+  .form-row label { font-size: .88rem; font-weight: 500; color: var(--text); }
+  .form-row input, .form-row select {
+    padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+    font: inherit; font-size: .95rem; background: var(--bg-subtle);
+    max-width: 300px;
+  }
+  .form-row input:focus, .form-row select:focus { outline: 2px solid var(--brand); outline-offset: 1px; }
+  .optional { color: var(--text-muted); font-weight: 400; }
+  .rsvp-status { border-radius: 8px; padding: 10px 14px; font-size: .9rem; }
+  .rsvp-status.success { background: var(--brand-light); color: var(--brand-dark); }
+  .rsvp-status.error { background: #fff3e0; color: #b45309; }
+</style>
+
+<script define:vars={{ eventId: id }}>
+  const form = document.getElementById("rsvp-form");
+  const btn = document.getElementById("rsvp-btn");
+  const countEl = document.getElementById("rsvp-count");
+  const statusEl = document.getElementById("rsvp-status");
+
+  form?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    btn.disabled = true;
+    statusEl.className = "rsvp-status hidden";
+    statusEl.textContent = "";
+
+    const name = document.getElementById("rsvp-name").value.trim();
+    const size = parseInt(document.getElementById("rsvp-size").value, 10);
+
+    try {
+      const res = await fetch("/api/rsvp", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ eventId, name, size }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        statusEl.className = "rsvp-status success";
+        statusEl.textContent = "You're in! 🎉";
+        if (data.rsvpCount != null) {
+          countEl.textContent = `${data.rsvpCount} neighbor${data.rsvpCount === 1 ? "" : "s"} going`;
+        }
+        form.reset();
+      } else {
+        statusEl.className = "rsvp-status error";
+        statusEl.textContent = data.error || "Couldn't save your RSVP. Please try again.";
+        btn.disabled = false;
+      }
+    } catch {
+      statusEl.className = "rsvp-status error";
+      statusEl.textContent = "Network error — please try again.";
+      btn.disabled = false;
+    }
+  });
+</script>
