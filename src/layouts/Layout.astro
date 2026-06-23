@@ -1,0 +1,111 @@
+---
+interface Props {
+  title: string;
+  description?: string;
+  ogImage?: string;
+  noindex?: boolean;
+}
+const {
+  title,
+  description = "Bowerman neighborhood — see what's coming up, post an event, stay connected.",
+  ogImage,
+  noindex = false,
+} = Astro.props;
+
+const canonical = new URL(Astro.url.pathname, Astro.site ?? Astro.url.origin).href;
+const siteTitle = title === "Bowerman" ? title : `${title} | Bowerman`;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    {noindex && <meta name="robots" content="noindex" />}
+    <title>{siteTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <!-- Open Graph -->
+    <meta property="og:title" content={siteTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonical} />
+    {ogImage && <meta property="og:image" content={ogImage} />}
+    <meta name="twitter:card" content="summary" />
+    <style is:global>
+      :root {
+        --brand: #16a34a;
+        --brand-light: #dcfce7;
+        --brand-dark: #14532d;
+        --text: #0f172a;
+        --text-muted: #64748b;
+        --border: #e2e8f0;
+        --bg: #ffffff;
+        --bg-subtle: #f8fafc;
+        --radius: 12px;
+        --shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
+        /* Category colors */
+        --cat-block-party: #f97316;
+        --cat-game-watch: #3b82f6;
+        --cat-garage-sale: #eab308;
+        --cat-meeting: #6366f1;
+        --cat-kids: #ec4899;
+        --cat-volunteer: #14b8a6;
+        --cat-social: #a855f7;
+        --cat-other: #94a3b8;
+      }
+      *, *::before, *::after { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font: 16px/1.6 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        color: var(--text);
+        background: var(--bg);
+      }
+      a { color: var(--brand-dark); }
+      a:hover { color: var(--brand); }
+      img { max-width: 100%; height: auto; }
+      .container { max-width: 1000px; margin: 0 auto; padding: 0 20px; }
+      .btn {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 10px 20px; border-radius: var(--radius);
+        border: 1px solid transparent; font: inherit; font-size: .9rem;
+        font-weight: 500; cursor: pointer; text-decoration: none;
+        transition: background .15s, transform .1s;
+      }
+      .btn:active { transform: scale(.98); }
+      .btn-primary { background: var(--brand); color: #fff; }
+      .btn-primary:hover { background: #15803d; color: #fff; }
+      .btn-secondary {
+        background: #fff; color: var(--text);
+        border-color: var(--border);
+      }
+      .btn-secondary:hover { background: var(--bg-subtle); }
+      .btn-sm { padding: 6px 14px; font-size: .82rem; }
+      .hidden { display: none !important; }
+      .sr-only {
+        position: absolute; width: 1px; height: 1px;
+        padding: 0; margin: -1px; overflow: hidden;
+        clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+      }
+      /* Category pill */
+      .cat-pill {
+        display: inline-block; padding: 2px 10px; border-radius: 99px;
+        font-size: .78rem; font-weight: 600; letter-spacing: .02em;
+        text-transform: uppercase; background: var(--brand-light); color: var(--brand-dark);
+      }
+    </style>
+  </head>
+  <body>
+    <slot name="before-nav" />
+    <slot />
+    <footer style="margin-top:60px;padding:28px 0;border-top:1px solid var(--border);text-align:center;color:var(--text-muted);font-size:.85rem;">
+      <div class="container" style="display:flex;flex-wrap:wrap;justify-content:center;gap:16px 24px;">
+        <a href="/post-event">Post an Event</a>
+        <a href="/bulletin">Bulletin Board</a>
+        <a href="/about">About</a>
+        <a href="/admin" style="color:var(--text-muted);">Admin</a>
+      </div>
+      <p style="margin:10px 0 0;">&copy; Bowerman Neighborhood</p>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,122 @@
+---
+// src/pages/admin/index.astro
+// Admin skeleton. Visitors reach this page only AFTER entering the neighborhood
+// passphrase (the edge gate). Then admins log in with their Netlify Identity
+// account to get remove/edit powers. Set Identity registration to "Invite only".
+//
+// This is intentionally minimal scaffolding: it lists published events and lets an
+// authenticated admin remove one. Bulletin removal follows the identical pattern
+// (POST { type: "bulletin", id }).
+const title = "Admin";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>{title}</title>
+    <!-- Netlify Identity widget -->
+    <script is:inline src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+    <style>
+      body { font: 16px/1.5 system-ui, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 20px; color: #0f172a; }
+      header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 24px; }
+      h1 { font-size: 1.4rem; margin: 0; }
+      button { font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; padding: 8px 14px; }
+      button.primary { background: #0ea5e9; border-color: #0ea5e9; color: #fff; }
+      button.danger { color: #b91c1c; border-color: #fecaca; }
+      .who { font-size: .85rem; color: #64748b; }
+      ul { list-style: none; padding: 0; }
+      li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid #e2e8f0; }
+      .meta { font-size: .85rem; color: #64748b; }
+      #gate, #empty { color: #64748b; }
+      .hidden { display: none; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Admin</h1>
+      <div>
+        <span id="who" class="who"></span>
+        <button id="auth" class="primary">Log in</button>
+      </div>
+    </header>
+
+    <p id="gate">Log in with your admin account to manage content.</p>
+    <p id="empty" class="hidden">No published events.</p>
+    <ul id="list"></ul>
+
+    <script is:inline>
+      const id = window.netlifyIdentity;
+      const authBtn = document.getElementById("auth");
+      const whoEl = document.getElementById("who");
+      const gateEl = document.getElementById("gate");
+      const emptyEl = document.getElementById("empty");
+      const listEl = document.getElementById("list");
+
+      function show(el, on) { el.classList.toggle("hidden", !on); }
+
+      async function token() {
+        const user = id.currentUser();
+        return user ? await user.jwt() : null; // jwt() refreshes if needed
+      }
+
+      async function loadEvents() {
+        const res = await fetch("/api/events");
+        const events = await res.json();
+        listEl.innerHTML = "";
+        show(emptyEl, events.length === 0);
+        for (const ev of events) {
+          const li = document.createElement("li");
+          const when = ev.startDateTime ? new Date(ev.startDateTime).toLocaleString() : "";
+          li.innerHTML =
+            '<span><strong></strong><div class="meta"></div></span>';
+          li.querySelector("strong").textContent = ev.title || "(untitled)";
+          li.querySelector(".meta").textContent = [ev.category, when].filter(Boolean).join(" · ");
+          const btn = document.createElement("button");
+          btn.className = "danger";
+          btn.textContent = "Remove";
+          btn.onclick = () => remove(ev.id, li, btn);
+          li.appendChild(btn);
+          listEl.appendChild(li);
+        }
+      }
+
+      async function remove(eventId, li, btn) {
+        if (!confirm("Remove this event?")) return;
+        btn.disabled = true;
+        const t = await token();
+        const res = await fetch("/.netlify/functions/admin-remove", {
+          method: "POST",
+          headers: { "content-type": "application/json", Authorization: "Bearer " + t },
+          body: JSON.stringify({ type: "events", id: eventId }),
+        });
+        if (res.ok) {
+          li.remove();
+          show(emptyEl, listEl.children.length === 0);
+        } else {
+          const { error } = await res.json().catch(() => ({ error: "Failed" }));
+          alert(error || "Failed to remove");
+          btn.disabled = false;
+        }
+      }
+
+      function refresh() {
+        const user = id.currentUser();
+        const loggedIn = !!user;
+        whoEl.textContent = loggedIn ? (user.email || "") : "";
+        authBtn.textContent = loggedIn ? "Log out" : "Log in";
+        show(gateEl, !loggedIn);
+        show(listEl, loggedIn);
+        if (loggedIn) loadEvents(); else listEl.innerHTML = "";
+      }
+
+      authBtn.onclick = () => (id.currentUser() ? id.logout() : id.open());
+
+      id.on("init", refresh);
+      id.on("login", () => { id.close(); refresh(); });
+      id.on("logout", refresh);
+    </script>
+  </body>
+</html>

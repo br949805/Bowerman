@@ -1,0 +1,50 @@
+---
+import { categoryStyle, formatEventDate } from "../lib/events.ts";
+
+interface Props {
+  event: {
+    id: string;
+    title: string;
+    category: string;
+    startDateTime: string;
+    endDateTime?: string;
+    allDay?: boolean;
+    locationName?: string;
+    hostName?: string;
+    description?: string;
+    rsvpCount?: number;
+  };
+}
+const { event } = Astro.props;
+const { bg, text } = categoryStyle(event.category);
+const dateStr = formatEventDate(event.startDateTime, event.endDateTime, event.allDay);
+---
+
+<a href={`/events/${event.id}`} class="event-card">
+  <div class="card-cat" style={`background:${bg};color:${text};`}>{event.category}</div>
+  <h3 class="card-title">{event.title}</h3>
+  <p class="card-date">{dateStr}</p>
+  {event.locationName && <p class="card-loc">📍 {event.locationName}</p>}
+  {event.description && <p class="card-desc">{event.description.slice(0, 120)}{event.description.length > 120 ? "…" : ""}</p>}
+  {(event.rsvpCount ?? 0) > 0 && <p class="card-rsvp">✓ {event.rsvpCount} going</p>}
+</a>
+
+<style>
+  .event-card {
+    display: block; text-decoration: none; color: inherit;
+    background: #fff; border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 18px 20px; transition: box-shadow .15s, transform .15s;
+    box-shadow: var(--shadow);
+  }
+  .event-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,.12); transform: translateY(-2px); }
+  .card-cat {
+    display: inline-block; padding: 2px 10px; border-radius: 99px;
+    font-size: .75rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .card-title { margin: 0 0 6px; font-size: 1.05rem; line-height: 1.3; }
+  .card-date { margin: 0 0 4px; font-size: .87rem; color: var(--text-muted); }
+  .card-loc { margin: 0 0 4px; font-size: .87rem; color: var(--text-muted); }
+  .card-desc { margin: 8px 0 0; font-size: .87rem; color: var(--text-muted); line-height: 1.5; }
+  .card-rsvp { margin: 8px 0 0; font-size: .82rem; color: var(--brand-dark); font-weight: 600; }
+</style>

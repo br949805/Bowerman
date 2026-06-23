@@ -1,0 +1,92 @@
+---
+const { pathname } = Astro.url;
+const links = [
+  { href: "/", label: "Home" },
+  { href: "/calendar", label: "Calendar" },
+  { href: "/bulletin", label: "Bulletin" },
+  { href: "/gallery", label: "Gallery" },
+  { href: "/about", label: "About" },
+];
+---
+
+<nav aria-label="Main navigation">
+  <div class="container nav-inner">
+    <a href="/" class="wordmark" aria-label="Bowerman home">
+      <span class="wordmark-icon">🏘</span>
+      <span class="wordmark-text">Bowerman</span>
+    </a>
+    <button class="nav-toggle" id="nav-toggle" aria-expanded="false" aria-controls="nav-links" aria-label="Toggle navigation">
+      <span></span><span></span><span></span>
+    </button>
+    <ul id="nav-links" class="nav-links">
+      {links.map(({ href, label }) => (
+        <li>
+          <a
+            href={href}
+            class:list={["nav-link", { active: pathname === href || (href !== "/" && pathname.startsWith(href)) }]}
+            aria-current={pathname === href ? "page" : undefined}
+          >{label}</a>
+        </li>
+      ))}
+    </ul>
+    <a href="/post-event" class="btn btn-primary btn-sm nav-cta">+ Post Event</a>
+  </div>
+</nav>
+
+<style>
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    background: #fff; border-bottom: 1px solid var(--border);
+    box-shadow: 0 1px 0 var(--border);
+  }
+  .nav-inner {
+    display: flex; align-items: center; gap: 8px;
+    padding-top: 12px; padding-bottom: 12px;
+  }
+  .wordmark {
+    display: flex; align-items: center; gap: 8px;
+    font-weight: 700; font-size: 1.1rem; color: var(--brand-dark);
+    text-decoration: none; margin-right: auto;
+  }
+  .wordmark:hover { color: var(--brand); }
+  .wordmark-icon { font-size: 1.3rem; line-height: 1; }
+  .nav-links {
+    display: flex; gap: 4px; list-style: none; margin: 0; padding: 0;
+  }
+  .nav-link {
+    padding: 6px 12px; border-radius: 8px;
+    font-size: .9rem; font-weight: 500; text-decoration: none;
+    color: var(--text-muted); transition: color .15s, background .15s;
+  }
+  .nav-link:hover { color: var(--text); background: var(--bg-subtle); }
+  .nav-link.active { color: var(--brand-dark); background: var(--brand-light); }
+  .nav-cta { white-space: nowrap; }
+  .nav-toggle {
+    display: none; flex-direction: column; gap: 5px;
+    background: none; border: none; cursor: pointer; padding: 6px; margin-left: auto;
+  }
+  .nav-toggle span {
+    display: block; width: 22px; height: 2px; background: var(--text); border-radius: 2px;
+    transition: transform .2s, opacity .2s;
+  }
+  @media (max-width: 680px) {
+    .nav-cta { display: none; }
+    .nav-toggle { display: flex; }
+    .nav-links {
+      display: none; position: absolute; top: 100%; left: 0; right: 0;
+      flex-direction: column; background: #fff; border-bottom: 1px solid var(--border);
+      padding: 12px 20px 16px; gap: 2px; box-shadow: 0 4px 12px rgba(0,0,0,.08);
+    }
+    .nav-links.open { display: flex; }
+    .nav-link { padding: 10px 12px; }
+  }
+</style>
+
+<script>
+  const toggle = document.getElementById("nav-toggle");
+  const links = document.getElementById("nav-links");
+  toggle?.addEventListener("click", () => {
+    const open = links?.classList.toggle("open");
+    toggle.setAttribute("aria-expanded", String(open));
+  });
+</script>

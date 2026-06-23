@@ -1,0 +1,275 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Nav from "../components/Nav.astro";
+import { CATEGORIES } from "../lib/events.ts";
+---
+
+<Layout title="Post an Event" description="Post a neighborhood event — block parties, game watches, garage sales, and more. It goes live immediately.">
+  <Nav slot="before-nav" />
+
+  <div class="container" style="padding-top:36px;padding-bottom:60px;">
+    <div class="form-page">
+      <header class="form-header">
+        <h1>Post an Event</h1>
+        <p class="form-sub">It'll show up on the calendar right away.</p>
+      </header>
+
+      <div id="success-msg" class="notice success hidden" role="alert">
+        <strong>Posted!</strong> Your event is now on the calendar. <a href="/calendar">View calendar →</a>
+      </div>
+
+      <form id="post-form" novalidate>
+        <!-- Honeypot (hidden, bots fill this in) -->
+        <div style="display:none;" aria-hidden="true">
+          <label for="website">Website</label>
+          <input id="website" name="website" type="text" tabindex="-1" autocomplete="off" />
+        </div>
+
+        <div class="form-section">
+          <div class="form-row required">
+            <label for="title">Event name</label>
+            <input id="title" name="title" type="text" required maxlength="120"
+              placeholder="e.g. Block Party, Game Watch, Garage Sale…" />
+            <span class="field-error" id="title-err"></span>
+          </div>
+
+          <div class="form-row required">
+            <label for="category">Category</label>
+            <select id="category" name="category" required>
+              <option value="">Select a category…</option>
+              {CATEGORIES.map((c) => <option value={c}>{c}</option>)}
+            </select>
+            <span class="field-error" id="category-err"></span>
+          </div>
+
+          <div class="form-row">
+            <label for="description">Description <span class="optional">(optional)</span></label>
+            <textarea id="description" name="description" rows="4" maxlength="1000"
+              placeholder="What to expect, what to bring, any details…"></textarea>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-row">
+            <label class="checkbox-label">
+              <input id="allDay" name="allDay" type="checkbox" />
+              All-day event
+            </label>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-row required" id="start-row">
+              <label for="startDate">Start date</label>
+              <input id="startDate" name="startDate" type="date" required />
+              <span class="field-error" id="startDate-err"></span>
+            </div>
+            <div class="form-row" id="startTime-row">
+              <label for="startTime">Start time</label>
+              <input id="startTime" name="startTime" type="time" />
+            </div>
+            <div class="form-row" id="end-row">
+              <label for="endDate">End date <span class="optional">(optional)</span></label>
+              <input id="endDate" name="endDate" type="date" />
+            </div>
+            <div class="form-row" id="endTime-row">
+              <label for="endTime">End time <span class="optional">(optional)</span></label>
+              <input id="endTime" name="endTime" type="time" />
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-row">
+            <label for="locationName">Location name <span class="optional">(optional)</span></label>
+            <input id="locationName" name="locationName" type="text" maxlength="120"
+              placeholder="e.g. John's backyard, the cul-de-sac…" />
+          </div>
+          <div class="form-row">
+            <label for="locationAddress">Address <span class="optional">(optional)</span></label>
+            <input id="locationAddress" name="locationAddress" type="text" maxlength="200"
+              placeholder="Street address" />
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-row required">
+            <label for="hostName">Your display name</label>
+            <input id="hostName" name="hostName" type="text" required maxlength="60"
+              placeholder="How should neighbors know you?" />
+            <span class="field-error" id="hostName-err"></span>
+          </div>
+          <div class="form-row">
+            <label for="hostContact">Contact email <span class="optional">(optional)</span></label>
+            <input id="hostContact" name="hostContact" type="email" maxlength="100"
+              placeholder="Only shown on the event page" />
+          </div>
+        </div>
+
+        <div id="form-error" class="notice error hidden" role="alert"></div>
+
+        <button type="submit" class="btn btn-primary submit-btn" id="submit-btn">
+          Post Event →
+        </button>
+        <p class="form-note">Events are visible to neighbors immediately. Admins may remove posts that violate community guidelines.</p>
+      </form>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .form-page { max-width: 600px; }
+  .form-header { margin-bottom: 28px; }
+  h1 { margin: 0 0 6px; font-size: 1.8rem; }
+  .form-sub { margin: 0; color: var(--text-muted); }
+
+  .form-section {
+    background: #fff; border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 24px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 18px;
+    box-shadow: var(--shadow);
+  }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .form-row { display: flex; flex-direction: column; gap: 6px; }
+  .form-row.required > label::after { content: " *"; color: #dc2626; }
+  .form-row label { font-size: .88rem; font-weight: 500; }
+  .form-row input:not([type="checkbox"]),
+  .form-row select,
+  .form-row textarea {
+    padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+    font: inherit; font-size: .95rem; background: var(--bg-subtle); resize: vertical;
+  }
+  .form-row input:focus, .form-row select:focus, .form-row textarea:focus {
+    outline: 2px solid var(--brand); outline-offset: 1px; border-color: transparent;
+  }
+  .form-row input[aria-invalid="true"], .form-row select[aria-invalid="true"] {
+    border-color: #dc2626;
+  }
+  .checkbox-label { display: flex; align-items: center; gap: 8px; font-size: .9rem; cursor: pointer; }
+  .checkbox-label input { width: 16px; height: 16px; accent-color: var(--brand); }
+  .optional { color: var(--text-muted); font-weight: 400; }
+  .field-error { font-size: .82rem; color: #dc2626; min-height: 1em; }
+
+  .notice { padding: 12px 16px; border-radius: 8px; font-size: .9rem; margin-bottom: 20px; }
+  .notice.success { background: var(--brand-light); color: var(--brand-dark); }
+  .notice.error { background: #fff3e0; color: #b45309; }
+
+  .submit-btn { width: 100%; justify-content: center; padding: 14px; font-size: 1rem; margin-bottom: 12px; }
+  .form-note { font-size: .8rem; color: var(--text-muted); margin: 0; text-align: center; }
+
+  @media (max-width: 500px) {
+    .form-grid { grid-template-columns: 1fr; }
+  }
+</style>
+
+<script>
+  const form = document.getElementById("post-form") as HTMLFormElement;
+  const submitBtn = document.getElementById("submit-btn") as HTMLButtonElement;
+  const successMsg = document.getElementById("success-msg")!;
+  const formError = document.getElementById("form-error")!;
+  const allDayChk = document.getElementById("allDay") as HTMLInputElement;
+
+  // Toggle time fields when all-day is checked
+  function updateAllDay() {
+    const allDay = allDayChk.checked;
+    const startTimeRow = document.getElementById("startTime-row")!;
+    const endTimeRow = document.getElementById("endTime-row")!;
+    startTimeRow.style.display = allDay ? "none" : "";
+    endTimeRow.style.display = allDay ? "none" : "";
+  }
+  allDayChk?.addEventListener("change", updateAllDay);
+
+  // Set default dates
+  const today = new Date().toISOString().split("T")[0];
+  (document.getElementById("startDate") as HTMLInputElement).value = today;
+
+  function showError(id: string, msg: string) {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = msg; }
+    const input = document.getElementById(id.replace("-err", ""));
+    if (input) input.setAttribute("aria-invalid", msg ? "true" : "false");
+  }
+
+  function validate(): boolean {
+    let ok = true;
+    showError("title-err", "");
+    showError("category-err", "");
+    showError("startDate-err", "");
+    showError("hostName-err", "");
+
+    const title = (document.getElementById("title") as HTMLInputElement).value.trim();
+    const category = (document.getElementById("category") as HTMLSelectElement).value;
+    const startDate = (document.getElementById("startDate") as HTMLInputElement).value;
+    const hostName = (document.getElementById("hostName") as HTMLInputElement).value.trim();
+
+    if (!title) { showError("title-err", "Please enter an event name."); ok = false; }
+    if (!category) { showError("category-err", "Please select a category."); ok = false; }
+    if (!startDate) { showError("startDate-err", "Please pick a start date."); ok = false; }
+    if (!hostName) { showError("hostName-err", "Please enter your display name."); ok = false; }
+    return ok;
+  }
+
+  form?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    formError.classList.add("hidden");
+    if (!validate()) return;
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Posting…";
+
+    const fd = new FormData(form);
+    const allDay = (document.getElementById("allDay") as HTMLInputElement).checked;
+    const startDate = fd.get("startDate") as string;
+    const startTime = fd.get("startTime") as string;
+    const endDate = fd.get("endDate") as string;
+    const endTime = fd.get("endTime") as string;
+
+    const startDateTime = allDay ? `${startDate}T00:00:00.000Z` : startTime
+      ? new Date(`${startDate}T${startTime}`).toISOString()
+      : new Date(`${startDate}T12:00:00`).toISOString();
+
+    const endDateTime = endDate
+      ? allDay
+        ? `${endDate}T00:00:00.000Z`
+        : endTime
+          ? new Date(`${endDate}T${endTime}`).toISOString()
+          : undefined
+      : undefined;
+
+    const payload = {
+      title: fd.get("title"),
+      category: fd.get("category"),
+      description: fd.get("description") || undefined,
+      allDay,
+      startDateTime,
+      endDateTime,
+      locationName: fd.get("locationName") || undefined,
+      locationAddress: fd.get("locationAddress") || undefined,
+      hostName: fd.get("hostName"),
+      hostContact: fd.get("hostContact") || undefined,
+      honeypot: fd.get("website") || "",
+    };
+
+    try {
+      const res = await fetch("/api/post-event", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        form.classList.add("hidden");
+        successMsg.classList.remove("hidden");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else {
+        formError.textContent = data.error || "Something went wrong. Please try again.";
+        formError.classList.remove("hidden");
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Post Event →";
+      }
+    } catch {
+      formError.textContent = "Network error — please try again.";
+      formError.classList.remove("hidden");
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Post Event →";
+    }
+  });
+</script>
